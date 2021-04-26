@@ -16,11 +16,12 @@ vcpkg_from_github(
 )
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
-   FEATURES # <- Keyword FEATURES is required because INVERTED_FEATURES are being used
+   FEATURES
      anim         WEBP_BUILD_ANIM_UTILS
      gif2webp     WEBP_BUILD_GIF2WEBP
      img2webp     WEBP_BUILD_IMG2WEBP
      vwebp        WEBP_BUILD_VWEBP
+     vwebp-sdl    WEBP_HAVE_SDL
      info         WEBP_BUILD_WEBPINFO
      mux          WEBP_BUILD_WEBPMUX
      extras       WEBP_BUILD_EXTRAS
@@ -60,6 +61,12 @@ vcpkg_copy_pdbs()
 vcpkg_fixup_cmake_targets(CONFIG_PATH share/WebP/cmake TARGET_PATH share/WebP) # find_package is called with WebP not libwebp
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
 
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/libwebp.pc" "-lwebp" "-lwebpd")
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/libwebpdecoder.pc" "-lwebpdecoder" "-lwebpdecoderd")
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/libwebpdemux.pc" "-lwebpdemux" "-lwebpdemuxd")
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/libwebpmux.pc" "-lwebpmux" "-lwebpmuxd")
+vcpkg_fixup_pkgconfig()
+
 
 set(BIN_NAMES get_disto gif2webp img2webp vwebp vwebp_sdl webpinfo webpmux webp_quality cwebp dwebp)
 file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/tools/webp/")
@@ -85,4 +92,4 @@ if(VCPKG_LIBRARY_LINKAGE STREQUAL static)
   file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/bin" "${CURRENT_PACKAGES_DIR}/debug/bin")
 endif()
 
-file(INSTALL "${SOURCE_PATH}/COPYING" DESTINATION "${CURRENT_PACKAGES_DIR}/share/libwebp" RENAME copyright)
+file(INSTALL "${SOURCE_PATH}/COPYING" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)

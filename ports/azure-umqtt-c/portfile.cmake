@@ -12,8 +12,8 @@ else()
     vcpkg_from_github(
         OUT_SOURCE_PATH SOURCE_PATH
         REPO Azure/azure-umqtt-c
-        REF 349a2bffc1addfdc4b61d30f80adc1e15b336fbd
-        SHA512 887ece4d9cbb32059c84d776d88ce05fa8474289afb1cd5873a672fc926024a416ac50a829c671fd2aae6b4eaa984f05196a3fff6a56011585d875f116a0a764
+        REF 478fd8e757dadfe2ca5fcd3953aeba24a14a98e1
+        SHA512 bece2a30abb88dd97b97e399b8e63f6833b052c01c2f779070d52bbc916af604568bf5098d5f994d278d70591b11c45a5fcca9350226eb6e59b04e53c2780bc4
         HEAD_REF master
     )
 endif()

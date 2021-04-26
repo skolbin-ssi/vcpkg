@@ -1,5 +1,7 @@
 # vcpkg_from_sourceforge
 
+The latest version of this document lives in the [vcpkg repo](https://github.com/Microsoft/vcpkg/blob/master/docs/maintainers/vcpkg_from_sourceforge.md).
+
 Download and extract a project from sourceforge.
 
 ## Usage:
@@ -42,6 +44,11 @@ The REPO is `soxr`, REF is not exist, and the FILENAME is `soxr-0.1.3-Source.tar
 ### SHA512
 The SHA512 hash that should match the archive.
 
+### WORKING_DIRECTORY
+If specified, the archive will be extracted into the working directory instead of `${CURRENT_BUILDTREES_DIR}/src/`.
+
+Note that the archive will still be extracted into a subfolder underneath that directory (`${WORKING_DIRECTORY}/${REF}-${HASH}/`).
+
 ### PATCHES
 A list of patches to be applied to the extracted sources.
 
@@ -60,4 +67,4 @@ Specifies that the default removal of the top level folder should not occur.
 * [tinyfiledialogs](https://github.com/Microsoft/vcpkg/blob/master/ports/tinyfiledialogs/portfile.cmake)
 
 ## Source
-[scripts/cmake/vcpkg_from_sourceforge.cmake](https://github.com/Microsoft/vcpkg/blob/master/scripts/cmake/vcpkg_from_sourceforge.cmake)
+[scripts/cmake/vcpkg\_from\_sourceforge.cmake](https://github.com/Microsoft/vcpkg/blob/master/scripts/cmake/vcpkg_from_sourceforge.cmake)

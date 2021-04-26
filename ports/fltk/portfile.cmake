@@ -1,3 +1,6 @@
+# FLTK has many improperly shared global variables that get duplicated into every DLL
+vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
+
 vcpkg_download_distfile(ARCHIVE
     URLS "https://fltk.org/pub/fltk/1.3.5/fltk-1.3.5-source.tar.gz"
     FILENAME "fltk-1.3.5.tar.gz"
@@ -10,13 +13,10 @@ vcpkg_extract_source_archive_ex(
     PATCHES
         findlibsfix.patch
         add-link-libraries.patch
+        config-path.patch
+        include.patch
+        fix-system-link.patch
 )
-
-if (VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
-    set(BUILD_SHARED ON)
-else()
-    set(BUILD_SHARED OFF)
-endif()
 
 if (VCPKG_TARGET_ARCHITECTURE MATCHES "arm" OR VCPKG_TARGET_ARCHITECTURE MATCHES "arm64")
     set(OPTION_USE_GL "-DOPTION_USE_GL=OFF")
@@ -34,55 +34,36 @@ vcpkg_configure_cmake(
         -DOPTION_USE_SYSTEM_ZLIB=ON
         -DOPTION_USE_SYSTEM_LIBPNG=ON
         -DOPTION_USE_SYSTEM_LIBJPEG=ON
-        -DOPTION_BUILD_SHARED_LIBS=${BUILD_SHARED}
+        -DOPTION_BUILD_SHARED_LIBS=OFF
+        -DFLTK_CONFIG_PATH=share/fltk
         ${OPTION_USE_GL}
 )
 
 vcpkg_install_cmake()
 
-if (VCPKG_TARGET_IS_LINUX)
-    vcpkg_fixup_cmake_targets(CONFIG_PATH share/${PORT} TARGET_PATH share/${PORT})
-    file(COPY ${CURRENT_PACKAGES_DIR}/bin/fluid DESTINATION ${CURRENT_PACKAGES_DIR}/tools/fltk)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/bin/fluid)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/debug/bin/fluid)
-elseif (VCPKG_TARGET_IS_OSX)
-    file(COPY ${CURRENT_PACKAGES_DIR}/bin/fluid.app DESTINATION ${CURRENT_PACKAGES_DIR}/tools/fltk)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/bin/fluid.app)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/debug/bin/fluid.app)
-else() 
-    vcpkg_fixup_cmake_targets(CONFIG_PATH CMake)
-    file(COPY ${CURRENT_PACKAGES_DIR}/bin/fluid.exe DESTINATION ${CURRENT_PACKAGES_DIR}/tools/fltk)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/bin/fluid.exe)
-    file(REMOVE ${CURRENT_PACKAGES_DIR}/debug/bin/fluid.exe)
-endif()
-
-file(REMOVE_RECURSE
-    ${CURRENT_PACKAGES_DIR}/debug/include
-    ${CURRENT_PACKAGES_DIR}/debug/share
-)
-
-file(REMOVE ${CURRENT_PACKAGES_DIR}/bin/fltk-config)
-file(REMOVE ${CURRENT_PACKAGES_DIR}/debug/bin/fltk-config)
+vcpkg_fixup_cmake_targets(CONFIG_PATH share/fltk)
 
 vcpkg_copy_pdbs()
 
-vcpkg_copy_tool_dependencies(${CURRENT_PACKAGES_DIR}/tools/fltk)
+if(VCPKG_TARGET_IS_OSX)
+    vcpkg_copy_tools(TOOL_NAMES fluid.app fltk-config AUTO_CLEAN)
+elseif(VCPKG_TARGET_IS_WINDOWS)
+    file(REMOVE ${CURRENT_PACKAGES_DIR}/bin/fltk-config ${CURRENT_PACKAGES_DIR}/debug/bin/fltk-config)
+    vcpkg_copy_tools(TOOL_NAMES fluid AUTO_CLEAN)
+else()
+    vcpkg_copy_tools(TOOL_NAMES fluid fltk-config AUTO_CLEAN)
+endif()
 
 if(VCPKG_LIBRARY_LINKAGE STREQUAL static)
     file(REMOVE_RECURSE
         ${CURRENT_PACKAGES_DIR}/debug/bin
         ${CURRENT_PACKAGES_DIR}/bin
     )
-else()
-    file(GLOB SHARED_LIBS "${CURRENT_PACKAGES_DIR}/lib/*_SHARED.lib" "${CURRENT_PACKAGES_DIR}/debug/lib/*_SHAREDd.lib")
-    file(GLOB STATIC_LIBS "${CURRENT_PACKAGES_DIR}/lib/*.lib" "${CURRENT_PACKAGES_DIR}/debug/lib/*.lib")
-    list(FILTER STATIC_LIBS EXCLUDE REGEX "_SHAREDd?\\.lib\$")
-    file(REMOVE ${STATIC_LIBS})
-    foreach(SHARED_LIB ${SHARED_LIBS})
-        string(REGEX REPLACE "_SHARED(d?)\\.lib\$" "\\1.lib" NEWNAME ${SHARED_LIB})
-        file(RENAME ${SHARED_LIB} ${NEWNAME})
-    endforeach()
 endif()
+file(REMOVE_RECURSE
+    ${CURRENT_PACKAGES_DIR}/debug/include
+    ${CURRENT_PACKAGES_DIR}/debug/share
+)
 
 foreach(FILE Fl_Export.H fl_utf8.h)
     file(READ ${CURRENT_PACKAGES_DIR}/include/FL/${FILE} FLTK_HEADER)
@@ -94,4 +75,4 @@ foreach(FILE Fl_Export.H fl_utf8.h)
     file(WRITE ${CURRENT_PACKAGES_DIR}/include/FL/${FILE} "${FLTK_HEADER}")
 endforeach()
 
-file(INSTALL ${SOURCE_PATH}/COPYING DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+file(INSTALL "${SOURCE_PATH}/COPYING" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)

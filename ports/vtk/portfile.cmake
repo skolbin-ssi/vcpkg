@@ -68,6 +68,42 @@ endif()
 if("mpi" IN_LIST FEATURES)
     list(APPEND ADDITIONAL_OPTIONS
         -DVTK_GROUP_ENABLE_MPI=YES
+        -DVTK_USE_MPI=YES
+    )
+endif()
+
+if("mpi" IN_LIST FEATURES AND "python" IN_LIST FEATURES)
+    list(APPEND ADDITIONAL_OPTIONS
+        -DVTK_MODULE_USE_EXTERNAL_VTK_mpi4py=OFF
+    )
+endif()
+
+if("opengl" IN_LIST FEATURES)
+    list(APPEND ADDITIONAL_OPTIONS
+        -DVTK_MODULE_ENABLE_VTK_DomainsChemestryOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_ImagingOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_RenderingContextOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_RenderingGL2PSOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_RenderingLICOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_RenderingOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_RenderingVolumeOpenGL2=YES
+        -DVTK_MODULE_ENABLE_VTK_opengl=YES
+        )
+endif()
+
+if ("openvr" IN_LIST FEATURES)
+    list(APPEND ADDITIONAL_OPTIONS    
+        -DVTK_MODULE_ENABLE_VTK_RenderingOpenVR=YES
+    )
+endif()
+
+if("cuda" IN_LIST FEATURES AND CMAKE_HOST_WIN32)
+    vcpkg_add_to_path("$ENV{CUDA_PATH}/bin")
+endif()
+
+if("utf8" IN_LIST FEATURES)
+    list(APPEND ADDITIONAL_OPTIONS
+        -DKWSYS_ENCODING_DEFAULT_CODEPAGE=CP_UTF8
     )
 endif()
 
@@ -85,24 +121,38 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
 
 # =============================================================================
 # Clone & patch
+
+# This patch is huge, we prefer to download it on demand
+vcpkg_download_distfile(QT_NO_KEYWORDS_PATCH
+  URLS "https://github.com/Kitware/VTK/commit/64265c5fd1a8e26a6a81241284dea6b3272f6db6.diff"
+  FILENAME 64265c5fd1a8e26a6a81241284dea6b3272f6db6.diff
+  SHA512 08991f07b30b893b14e906017b77fb700a8298a3a8906086a0c4b67688c1c0431b3d6bf890df70bd3ebf963cbb9c035b5dbcb9d7593e8c716c3a594ccb9a0fc7
+)
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO Kitware/VTK
-    REF ab278e87b181e3a02082bea7361fbaa3ddafb3ad # v9.0 
-    SHA512 50a324f55b58bc4415f972f711420e83b41a100b27729266db4541c24bc7d7bcd27d9158ce2588178b9b2e43c20b9695ffe382605f5cde331e8371e213655164
+    REF 96e6fa9b3ff245e4d51d49f23d40e9ad8774e85e # v9.0.1
+    SHA512 0efb1845053b6143e5ee7fa081b8be98f6825262c59051e88b2be02497e23362055067b2f811eff82e93eb194e5a9afd2a12e3878a252eb4011a5dab95127a6f
     HEAD_REF master
     PATCHES
-        6890.diff         # already merged upstream
+        6811.patch
         FindLZMA.patch    # Will be fixed in 9.1?
         FindLZ4.patch
         Findproj.patch
         vtkm.patch # To include an external VTKm build (v.1.5 required)
         pegtl.patch
         pythonwrapper.patch # Required by ParaView to Wrap required classes
-        NoUndefDebug.patch # Required to link against correct Python library depending on build type. 
+        NoUndefDebug.patch # Required to link against correct Python library depending on build type.
         python_debug.patch
         fix-using-hdf5.patch
+        module-name-mangling.patch
         # Last patch TODO: Patch out internal loguru
+        FindExpat.patch # The find_library calls are taken care of by vcpkg-cmake-wrapper.cmake of expat
+        fix-freetype.patch # Should be fixed next version, !7367 + !7434
+        # Remove these 2 official patches in the next update
+        ${QT_NO_KEYWORDS_PATCH}
+        0002-Qt-enforce-QT_NO_KEYWORDS-builds-by-VTK-itself.patch
 )
 
 # =============================================================================
@@ -128,6 +178,7 @@ vcpkg_configure_cmake(
         -DVTK_INSTALL_PACKAGE_DIR=share/vtk
         -DVTK_INSTALL_RUNTIME_DIR=bin
         -DVTK_FORBID_DOWNLOADS=ON
+        -DVTK_ENABLE_REMOTE_MODULES=OFF
         # VTK groups to enable
         -DVTK_GROUP_ENABLE_StandAlone=YES
         -DVTK_GROUP_ENABLE_Rendering=YES
@@ -245,30 +296,25 @@ endif()
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
 
-# =============================================================================
-# Handle copyright
-file(COPY ${SOURCE_PATH}/Copyright.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/vtk)
-file(RENAME ${CURRENT_PACKAGES_DIR}/share/vtk/Copyright.txt ${CURRENT_PACKAGES_DIR}/share/vtk/copyright)
-
 vcpkg_copy_tool_dependencies("${CURRENT_PACKAGES_DIR}/tools/vtk")
 
 ## Files Modules needed by ParaView
 if("paraview" IN_LIST FEATURES)
-    set(VTK_CMAKE_NEEDED vtkCompilerChecks vtkCompilerPlatformFlags vtkCompilerExtraFlags vtkInitializeBuildType 
+    set(VTK_CMAKE_NEEDED vtkCompilerChecks vtkCompilerPlatformFlags vtkCompilerExtraFlags vtkInitializeBuildType
                          vtkSupportMacros vtkDirectories vtkVersion FindPythonModules vtkModuleDebugging vtkExternalData)
     foreach(module ${VTK_CMAKE_NEEDED})
         file(INSTALL "${SOURCE_PATH}/CMake/${module}.cmake" DESTINATION "${CURRENT_PACKAGES_DIR}/share/vtk")
     endforeach()
-        
+
     ## Check List on UPDATE !!
     file(INSTALL "${SOURCE_PATH}/CMake/vtkRequireLargeFilesSupport.cxx" DESTINATION "${CURRENT_PACKAGES_DIR}/share/vtk")
 
     file(INSTALL "${SOURCE_PATH}/GUISupport/Qt/QVTKOpenGLWidget.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}") # Legacy header
-    
+
     file(INSTALL "${SOURCE_PATH}/Common/Core/vtkRange.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}") # this should get installed by VTK
     file(INSTALL "${SOURCE_PATH}/Common/Core/vtkRangeIterableTraits.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}") # this should get installed by VTK
     file(INSTALL "${SOURCE_PATH}/Common/DataModel/vtkCompositeDataSetNodeReference.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}") # this should get installed by VTK
-    #ParaView requires some internal headers 
+    #ParaView requires some internal headers
     file(INSTALL "${SOURCE_PATH}/Rendering/Annotation/vtkScalarBarActorInternal.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}")
     file(INSTALL "${SOURCE_PATH}/Filters/Statistics/vtkStatisticsAlgorithmPrivate.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}")
     file(INSTALL "${SOURCE_PATH}/Rendering/OpenGL2/vtkCompositePolyDataMapper2Internal.h" DESTINATION "${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION}")
@@ -281,13 +327,13 @@ if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
         file(INSTALL ${STATIC_PYTHON_FILES} DESTINATION ${CURRENT_PACKAGES_DIR}/include/vtk-${VTK_SHORT_VERSION})
     endif()
 endif()
-    
+
 #remove one get_filename_component(_vtk_module_import_prefix "${_vtk_module_import_prefix}" DIRECTORY) from vtk-prefix.cmake and VTK-vtk-module-properties and vtk-python.cmake
 set(filenames_fix_prefix vtk-prefix VTK-vtk-module-properties vtk-python)
 foreach(name IN LISTS filenames_fix_prefix)
 if(EXISTS "${CURRENT_PACKAGES_DIR}/share/vtk/${name}.cmake")
     file(READ "${CURRENT_PACKAGES_DIR}/share/vtk/${name}.cmake" _contents)
-    string(REPLACE 
+    string(REPLACE
 [[set(_vtk_module_import_prefix "${CMAKE_CURRENT_LIST_DIR}")
 get_filename_component(_vtk_module_import_prefix "${_vtk_module_import_prefix}" DIRECTORY)]]
 [[set(_vtk_module_import_prefix "${CMAKE_CURRENT_LIST_DIR}")]] _contents "${_contents}")
@@ -296,3 +342,7 @@ else()
     debug_message("FILE:${CURRENT_PACKAGES_DIR}/share/vtk/${name}.cmake does not exist! No prefix correction!")
 endif()
 endforeach()
+
+# =============================================================================
+# Handle copyright
+file(INSTALL ${SOURCE_PATH}/Copyright.txt DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
