@@ -56,12 +56,13 @@ function(x_vcpkg_pkgconfig_get_modules)
         message(FATAL_ERROR "extra arguments passed to x_vcpkg_pkgconfig_get_modules: ${arg_UNPARSED_ARGUMENTS}")
     endif()
 
-    vcpkg_find_acquire_program(PKGCONFIG)
+    set(PKGCONFIG "${CURRENT_INSTALLED_DIR}/../@HOST_TRIPLET@/tools/pkgconf/pkgconf@VCPKG_HOST_EXECUTABLE_SUFFIX@")
+
     set(backup_PKG_CONFIG_PATH "$ENV{PKG_CONFIG_PATH}")
 
     set(var_suffixes)
     if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
-        z_vcpkg_set_pkgconfig_path("${CURRENT_INSTALLED_DIR}/lib/pkgconfig" "${backup_PKG_CONFIG_PATH}")
+        z_vcpkg_set_pkgconfig_path("${CURRENT_INSTALLED_DIR}/lib/pkgconfig${VCPKG_HOST_PATH_SEPARATOR}${CURRENT_PACKAGES_DIR}/lib/pkgconfig" "${backup_PKG_CONFIG_PATH}")
         if(arg_LIBS)
             execute_process(
                 COMMAND "${PKGCONFIG}" --libs ${arg_MODULES}
@@ -96,7 +97,7 @@ function(x_vcpkg_pkgconfig_get_modules)
         endif()
     endif()
     if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
-        z_vcpkg_set_pkgconfig_path("${CURRENT_INSTALLED_DIR}/debug/lib/pkgconfig" "${backup_PKG_CONFIG_PATH}")
+        z_vcpkg_set_pkgconfig_path("${CURRENT_INSTALLED_DIR}/debug/lib/pkgconfig${VCPKG_HOST_PATH_SEPARATOR}${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig" "${backup_PKG_CONFIG_PATH}")
         if(arg_LIBS)
             execute_process(
                 COMMAND "${PKGCONFIG}" --libs ${arg_MODULES}
