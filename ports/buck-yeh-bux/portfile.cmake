@@ -1,10 +1,9 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO buck-yeh/bux
-    REF b40490e3f386392daff471e420c1cced868ea3b3 # v1.6.7
-    SHA512 37b6cedd884f646da1db07c15bb75a357728a30cd93ca945aaa8e0cc3d0e2f7f811468c6d0cba1735badd90c081dc2e5866c74b7410e5d3d417c9fcc62caca02
+    REF "${VERSION}"
+    SHA512 236145828dae5b0c69077ec4c5b40259b5e4b3d095e4ad138973ebf81f62a25a3ea72dcade5549c8608457e2868209f0ca7b292fa4f839399b9bbfee8c22aeff
     HEAD_REF main
-    PATCHES fix-clang-cl.patch
 )
 
 vcpkg_cmake_configure(

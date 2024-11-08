@@ -4,16 +4,12 @@ vcpkg_from_gitlab(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO GNOME/pango
     REF "${VERSION}"
-    SHA512 30be64784fac2539741c5e085ed0cf515fdd2044e71b6c08121dfb838e50d1a31f4f9e53d9869b65aa1fa246ab5cc1bec18503a08dcf0337aece84290472e336
+    SHA512 1c5f5f2de778b2ca157a4f3eb8bbbba1a79f5f9d60aac678e9c213005f1d8bedfc027ee5c1cebb07dc0eb8c308c38c37beb05293ef2cbe4ac9a0b481176934bb
     HEAD_REF master
-    PATCHES
-        freetype2-pc.patch
 ) 
 
+
 if("introspection" IN_LIST FEATURES)
-    if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_LIBRARY_LINKAGE STREQUAL "static")
-        message(FATAL_ERROR "Feature introspection currently only supports dynamic build.")
-    endif()
     list(APPEND OPTIONS_DEBUG -Dintrospection=disabled)
     list(APPEND OPTIONS_RELEASE -Dintrospection=enabled)
 else()
@@ -54,4 +50,4 @@ vcpkg_copy_pdbs()
 
 vcpkg_copy_tools(TOOL_NAMES pango-view pango-list pango-segmentation AUTO_CLEAN)
 
-file(INSTALL "${SOURCE_PATH}/COPYING" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
+vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/COPYING")

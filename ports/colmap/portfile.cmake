@@ -1,13 +1,11 @@
-set(COLMAP_REF "29a1e3642a3b00734a52b21e597ea4d576485fe6") # 3.7 fix
+set(COLMAP_REF "0bd66d901c7549051e21e8f648777f802eb20a73") # v3.10
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO colmap/colmap
-    REF ${COLMAP_REF}
-    SHA512 c22511592dadd1fce51baeaa5ab3ca48b0df5f1c02f9e2a97593ea1b01c5aea0e1054063a5665e2653f2c7b1b7525ce4c62ae35fb4197df614112861045b76fd
-    HEAD_REF dev
-    PATCHES
-        fix-dependencies.patch
+    REF "${VERSION}"
+    SHA512 1bcb6b1a740d07666e9f1dcc813bd4464113d0054238c0f86a0ed94099918947d1a58d83661f8ff3fc699727627436b2b555c5d51d37c8ebad7f590155dcb43d
+    HEAD_REF main
 )
 
 if (NOT TRIPLET_SYSTEM_ARCH STREQUAL "x64" AND ("cuda" IN_LIST FEATURES OR "cuda-redist" IN_LIST FEATURES))
@@ -28,11 +26,12 @@ set(TESTS_ENABLED OFF)
 
 if("cuda" IN_LIST FEATURES)
     set(CUDA_ENABLED ON)
+    set(CUDA_ARCHITECTURES "native")
 endif()
 
 if("cuda-redist" IN_LIST FEATURES)
     set(CUDA_ENABLED ON)
-    set(CUDA_ARCHS "Common")
+    set(CUDA_ARCHITECTURES "all-major")
 endif()
 
 if("tests" IN_LIST FEATURES)
@@ -49,7 +48,7 @@ vcpkg_cmake_configure(
     DISABLE_PARALLEL_CONFIGURE
     OPTIONS
         -DCUDA_ENABLED=${CUDA_ENABLED}
-        -DCUDA_ARCHS=${CUDA_ARCHS}
+        -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHITECTURES}
         -DTESTS_ENABLED=${TESTS_ENABLED}
         -DGIT_COMMIT_ID=${GIT_COMMIT_ID}
         -DGIT_COMMIT_DATE=${COLMAP_GIT_COMMIT_DATE}
@@ -73,7 +72,6 @@ file(REMOVE_RECURSE
     "${CURRENT_PACKAGES_DIR}/debug/include"
     "${CURRENT_PACKAGES_DIR}/debug/share"
     "${CURRENT_PACKAGES_DIR}/include/colmap/exe"
-    "${CURRENT_PACKAGES_DIR}/include/colmap/lib/Graclus/multilevelLib"
     "${CURRENT_PACKAGES_DIR}/include/colmap/tools"
     "${CURRENT_PACKAGES_DIR}/include/colmap/ui/media"
     "${CURRENT_PACKAGES_DIR}/include/colmap/ui/shaders"
@@ -86,6 +84,6 @@ file(REMOVE_RECURSE
 
 vcpkg_copy_pdbs()
 
-file(INSTALL "${SOURCE_PATH}/COPYING.txt" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
+vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/COPYING.txt")
 
 file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")

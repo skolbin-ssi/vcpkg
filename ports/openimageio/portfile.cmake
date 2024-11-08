@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO OpenImageIO/oiio
+    REPO AcademySoftwareFoundation/OpenImageIO
     REF "v${VERSION}"
-    SHA512 c7a4283b78197c262d8da31460ce8b07b44546f822142e32e6c1ea22376e1c4b9cfe9c39cc0994987c6c4f653c1f2764057944da97a3a090bf1bcb74a2a0b2c2
+    SHA512 1e24d7ffc3ad65a1fe1f53ae59006de912c0a8d85827d64671fab95350977e22e2d147cf26ffe362646c768747ec11e6f9aeae04ea66030f82ad597adf3135a5
     HEAD_REF master
     PATCHES
         fix-dependencies.patch
@@ -10,11 +10,8 @@ vcpkg_from_github(
         fix-openexr-dll.patch
         imath-version-guard.patch
         fix-openimageio_include_dir.patch
-        fix-vs2019-encoding-conversion.patch
-        qt6.patch
-        more_qt6.patch
         fix-openexr-target-missing.patch
-        1aa2cf6edf9f2bd57a21998fceeb095cbe1f2b84.patch
+        fix-dependency-libraw.patch
 )
 
 file(REMOVE_RECURSE "${SOURCE_PATH}/ext")
@@ -44,8 +41,7 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
         libheif     USE_LIBHEIF
         pybind11    USE_PYTHON
         tools       OIIO_BUILD_TOOLS
-        tools       USE_OPENGL
-        tools       USE_QT
+        viewer      ENABLE_IV
 )
 
 vcpkg_cmake_configure(
@@ -53,14 +49,15 @@ vcpkg_cmake_configure(
     OPTIONS
         ${FEATURE_OPTIONS}
         -DBUILD_TESTING=OFF
+        -DOIIO_BUILD_TESTS=OFF
         -DUSE_DCMTK=OFF
         -DUSE_NUKE=OFF
-        -DUSE_QT=OFF
         -DUSE_OpenVDB=OFF
         -DUSE_PTEX=OFF
         -DUSE_TBB=OFF
         -DLINKSTATIC=OFF # LINKSTATIC breaks library lookup
         -DBUILD_MISSING_FMT=OFF
+        -DINTERNALIZE_FMT=OFF  # carry fmt's msvc utf8 usage requirements
         -DBUILD_MISSING_ROBINMAP=OFF
         -DBUILD_MISSING_DEPS=OFF
         -DSTOP_ON_WARNING=OFF
@@ -72,6 +69,7 @@ vcpkg_cmake_configure(
         "-DREQUIRED_DEPS=fmt;JPEG;PNG;Robinmap"
     MAYBE_UNUSED_VARIABLES
         ENABLE_INSTALL_testtex
+        ENABLE_IV
 )
 
 vcpkg_cmake_install()
@@ -80,17 +78,28 @@ vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/OpenImageIO)
 
 if("tools" IN_LIST FEATURES)
     vcpkg_copy_tools(
-        TOOL_NAMES iconvert idiff igrep iinfo maketx oiiotool iv
+        TOOL_NAMES iconvert idiff igrep iinfo maketx oiiotool
         AUTO_CLEAN
     )
 endif()
 
-# Clean
+if("viewer" IN_LIST FEATURES)
+    vcpkg_copy_tools(
+        TOOL_NAMES iv
+        AUTO_CLEAN
+    )
+endif()
+
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/share/doc"
                     "${CURRENT_PACKAGES_DIR}/debug/include"
                     "${CURRENT_PACKAGES_DIR}/debug/share")
 
 vcpkg_fixup_pkgconfig()
+
+if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
+    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/OpenImageIO/export.h" "ifdef OIIO_STATIC_DEFINE" "if 1")
+endif()
+
 
 file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE.md")

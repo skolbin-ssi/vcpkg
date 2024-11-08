@@ -3,10 +3,13 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO boostorg/lockfree
-    REF boost-1.81.0
-    SHA512 e912b96971df23f317807d49ed316f417ec4cbcbc37d35fed2c9404ab861dce62fb76074f2ed3e8cfa775b6785878bb85462331ac658924a1e63e158e56ba693
+    REF boost-${VERSION}
+    SHA512 1cfeb02576b8075449fb899ddc46dbb5d953b27abf768fe7d6a72506d1b45d6d93621a83189238f7366c5070ed915680b30c532d1a95b0c24d55bc6f17d09f27
     HEAD_REF master
 )
 
-include(${CURRENT_INSTALLED_DIR}/share/boost-vcpkg-helpers/boost-modular-headers.cmake)
-boost_modular_headers(SOURCE_PATH ${SOURCE_PATH})
+set(FEATURE_OPTIONS "")
+boost_configure_and_install(
+    SOURCE_PATH "${SOURCE_PATH}"
+    OPTIONS ${FEATURE_OPTIONS}
+)
